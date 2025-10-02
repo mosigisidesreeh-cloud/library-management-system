@@ -1,0 +1,172 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+class Book {
+private:
+    string title;
+    string author;
+    string isbn;
+    bool isBorrowed;
+
+public:
+    Book(string t, string a, string i) : title(t), author(a), isbn(i), isBorrowed(false) {}
+
+    string getTitle() const { return title; }
+    string getAuthor() const { return author; }
+    string getISBN() const { return isbn; }
+    bool getIsBorrowed() const { return isBorrowed; }
+
+    void borrowBook() { isBorrowed = true; }
+    void returnBook() { isBorrowed = false; }
+
+    void display() const {
+        cout << "Title: " << title << ", Author: " << author 
+             << ", ISBN: " << isbn << ", Status: " 
+             << (isBorrowed ? "Borrowed" : "Available") << endl;
+    }
+};
+
+class User {
+private:
+    string username;
+    vector<Book*> borrowedBooks;
+
+public:
+    User(string name) : username(name) {}
+
+    string getUsername() const { return username; }
+
+    void borrowBook(Book* book) {
+        if (book->getIsBorrowed()) {
+            cout << "Book already borrowed.\n";
+        } else {
+            book->borrowBook();
+            borrowedBooks.push_back(book);
+            cout << username << " borrowed \"" << book->getTitle() << "\"\n";
+        }
+    }
+
+    void returnBook(Book* book) {
+        auto it = find(borrowedBooks.begin(), borrowedBooks.end(), book);
+        if (it != borrowedBooks.end()) {
+            book->returnBook();
+            borrowedBooks.erase(it);
+            cout << username << " returned \"" << book->getTitle() << "\"\n";
+        } else {
+            cout << "This user did not borrow this book.\n";
+        }
+    }
+
+    void listBorrowedBooks() const {
+        cout << username << " has borrowed:\n";
+        if (borrowedBooks.empty()) {
+            cout << "No books borrowed.\n";
+            return;
+        }
+        for (auto book : borrowedBooks) {
+            cout << "- " << book->getTitle() << endl;
+        }
+    }
+};
+
+class Library {
+private:
+    vector<Book> books;
+    vector<User> users;
+
+public:
+    void addBook(const Book& book) {
+        books.push_back(book);
+        cout << "Added book: " << book.getTitle() << endl;
+    }
+
+    void removeBook(const string& isbn) {
+        auto it = remove_if(books.begin(), books.end(),
+            [&](const Book& b) { return b.getISBN() == isbn; });
+        if (it != books.end()) {
+            cout << "Removed book with ISBN: " << isbn << endl;
+            books.erase(it, books.end());
+        } else {
+            cout << "Book not found with ISBN: " << isbn << endl;
+        }
+    }
+
+    Book* searchByTitle(const string& title) {
+        for (auto& book : books) {
+            if (book.getTitle() == title) {
+                return &book;
+            }
+        }
+        return nullptr;
+    }
+
+    Book* searchByISBN(const string& isbn) {
+        for (auto& book : books) {
+            if (book.getISBN() == isbn) {
+                return &book;
+            }
+        }
+        return nullptr;
+    }
+
+    void addUser(const User& user) {
+        users.push_back(user);
+        cout << "Added user: " << user.getUsername() << endl;
+    }
+
+    User* getUser(const string& username) {
+        for (auto& user : users) {
+            if (user.getUsername() == username) {
+                return &user;
+            }
+        }
+        return nullptr;
+    }
+
+    void displayBooks() const {
+        cout << "Library books:\n";
+        for (const auto& book : books) {
+            book.display();
+        }
+    }
+};
+
+int main() {
+    Library lib;
+
+    // Adding books
+    lib.addBook(Book("The C++ Programming Language", "Bjarne Stroustrup", "1111"));
+    lib.addBook(Book("Clean Code", "Robert C. Martin", "2222"));
+    lib.addBook(Book("Design Patterns", "Erich Gamma", "3333"));
+
+    lib.displayBooks();
+
+    // Adding users
+    lib.addUser(User("Alice"));
+    lib.addUser(User("Bob"));
+
+    // Borrow and return books
+    User* alice = lib.getUser("Alice");
+    User* bob = lib.getUser("Bob");
+
+    Book* book1 = lib.searchByISBN("1111");
+    Book* book2 = lib.searchByTitle("Clean Code");
+
+    if (alice && book1) alice->borrowBook(book1);
+    if (bob && book1) bob->borrowBook(book1); // Should say already borrowed
+    if (bob && book2) bob->borrowBook(book2);
+
+    alice->listBorrowedBooks();
+    bob->listBorrowedBooks();
+
+    if (alice && book1) alice->returnBook(book1);
+    if (bob && book1) bob->borrowBook(book1); // Now should succeed
+
+    lib.displayBooks();
+
+    return 0;
+}
